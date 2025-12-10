@@ -1219,7 +1219,7 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
         FloatingActionButtonLocation.miniCenterDocked ||
         FloatingActionButtonLocation.miniCenterFloat ||
         FloatingActionButtonLocation.miniEndDocked ||
-        FloatingActionButtonLocation.miniEndFloat => true,
+        FloatingActionButtonLocation.miniEndFloat => snackBarSize.width - 600 < floatingActionButtonRect.width + 16,
         FloatingActionButtonLocation() => true,
       };
       if (floatingActionButtonRect.size != Size.zero && isSnackBarFloating && showAboveFab) {
