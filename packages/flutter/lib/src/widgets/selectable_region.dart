@@ -2825,7 +2825,8 @@ abstract class MultiSelectableSelectionContainerDelegate extends SelectionContai
     for (final selection in selections) {
       buffer.write(selection.plainText);
     }
-    return SelectedContent(plainText: buffer.toString());
+    return SelectedContent(
+      plainText: selections.map((SelectedContent e) => e.plainText).join('\n\n'));
   }
 
   /// The total length of the content under this [SelectionContainerDelegate].

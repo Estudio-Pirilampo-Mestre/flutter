@@ -4671,6 +4671,46 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('PopupMenuButton updates position when the keyboard appears', (
+    WidgetTester tester,
+  ) async {
+    final fieldFocusNode = FocusNode();
+    addTearDown(fieldFocusNode.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: PopupMenuButton<int>(
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
+                PopupMenuItem<int>(value: 1, child: TextField(focusNode: fieldFocusNode)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(PopupMenuButton<int>));
+    await tester.pumpAndSettle();
+    fieldFocusNode.requestFocus();
+    await tester.pump();
+    expect(fieldFocusNode.hasFocus, isTrue);
+
+    final Rect menuRectBeforeKeyboard = tester.getRect(find.byType(SingleChildScrollView));
+    final double viewHeight = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    const keyboardHeight = 300.0;
+
+    tester.view.viewInsets = FakeViewPadding(bottom: keyboardHeight * tester.view.devicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pump();
+
+    final Rect menuRectAfterKeyboard = tester.getRect(find.byType(SingleChildScrollView));
+    expect(menuRectAfterKeyboard.top, lessThan(menuRectBeforeKeyboard.top));
+    expect(menuRectAfterKeyboard.bottom, lessThanOrEqualTo(viewHeight - keyboardHeight - 8.0));
+  });
+
   testWidgets('PopupMenuDivider custom thickness', (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(

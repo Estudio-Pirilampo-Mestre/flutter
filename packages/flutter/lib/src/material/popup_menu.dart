@@ -27,6 +27,7 @@ import 'list_tile_theme.dart';
 import 'material.dart';
 import 'material_localizations.dart';
 import 'popup_menu_theme.dart';
+import 'scrollbar.dart';
 import 'text_theme.dart';
 import 'theme.dart';
 import 'tooltip.dart';
@@ -671,7 +672,7 @@ class _PopupMenu<T> extends StatefulWidget {
   });
 
   final List<GlobalKey> itemKeys;
-  final _PopupMenuRoute<T> route;
+  final PopupMenuRoute<T> route;
   final String? semanticLabel;
   final BoxConstraints? constraints;
   final Clip clipBehavior;
@@ -682,6 +683,7 @@ class _PopupMenu<T> extends StatefulWidget {
 
 class _PopupMenuState<T> extends State<_PopupMenu<T>> {
   List<CurvedAnimation> _opacities = const <CurvedAnimation>[];
+  ScrollController? _scrollController;
 
   @override
   void initState() {
@@ -768,10 +770,26 @@ class _PopupMenuState<T> extends State<_PopupMenu<T>> {
           namesRoute: true,
           explicitChildNodes: true,
           label: widget.semanticLabel,
-          child: SingleChildScrollView(
-            padding: widget.route.menuPadding ?? popupMenuTheme.menuPadding ?? defaults.menuPadding,
-            child: ListBody(children: children),
-          ),
+          child: widget.route.customEntry == null
+              ? Scrollbar(
+                  controller: _scrollController ??= ScrollController(),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding:
+                        widget.route.menuPadding ??
+                        popupMenuTheme.menuPadding ??
+                        defaults.menuPadding,
+                    child: ListBody(children: children),
+                  ),
+                )
+              : Padding(
+                  padding:
+                      widget.route.menuPadding ??
+                      popupMenuTheme.menuPadding ??
+                      defaults.menuPadding ??
+                      .zero,
+                  child: children.first,
+                ),
         ),
       ),
     );
@@ -815,6 +833,7 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
     this.selectedItemIndex,
     this.textDirection,
     this.padding,
+    this.viewInsets,
     this.avoidBounds,
   );
 
@@ -835,6 +854,8 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
   // The padding of unsafe area.
   EdgeInsets padding;
 
+  EdgeInsets viewInsets;
+
   // List of rectangles that we should avoid overlapping. Unusable screen area.
   final Set<Rect> avoidBounds;
 
@@ -848,7 +869,7 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
     // direction.
     return BoxConstraints.loose(
       constraints.biggest,
-    ).deflate(const EdgeInsets.all(_kMenuScreenPadding) + padding);
+    ).deflate(const EdgeInsets.all(_kMenuScreenPadding) + padding + viewInsets);
   }
 
   @override
@@ -898,15 +919,22 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
     double y = wantedPosition.dy;
     // Avoid going outside an area defined as the rectangle 8.0 pixels from the
     // edge of the screen in every direction.
-    if (x < screen.left + _kMenuScreenPadding + padding.left) {
-      x = screen.left + _kMenuScreenPadding + padding.left;
-    } else if (x + childSize.width > screen.right - _kMenuScreenPadding - padding.right) {
-      x = screen.right - childSize.width - _kMenuScreenPadding - padding.right;
+    if (x < screen.left + _kMenuScreenPadding + padding.left + viewInsets.left) {
+      x = screen.left + _kMenuScreenPadding + padding.left + viewInsets.left;
+    } else if (x + childSize.width >
+        screen.right - _kMenuScreenPadding - padding.right - viewInsets.right) {
+      x = screen.right - childSize.width - _kMenuScreenPadding - padding.right - viewInsets.right;
     }
-    if (y < screen.top + _kMenuScreenPadding + padding.top) {
-      y = _kMenuScreenPadding + padding.top;
-    } else if (y + childSize.height > screen.bottom - _kMenuScreenPadding - padding.bottom) {
-      y = screen.bottom - childSize.height - _kMenuScreenPadding - padding.bottom;
+    if (y < screen.top + _kMenuScreenPadding + padding.top + viewInsets.top) {
+      y = _kMenuScreenPadding + padding.top + viewInsets.top;
+    } else if (y + childSize.height >
+        screen.bottom - _kMenuScreenPadding - padding.bottom - viewInsets.bottom) {
+      y =
+          screen.bottom -
+          childSize.height -
+          _kMenuScreenPadding -
+          padding.bottom -
+          viewInsets.bottom;
     }
 
     return Offset(x, y);
@@ -924,15 +952,16 @@ class _PopupMenuRouteLayout extends SingleChildLayoutDelegate {
         textDirection != oldDelegate.textDirection ||
         !listEquals(itemSizes, oldDelegate.itemSizes) ||
         padding != oldDelegate.padding ||
+        viewInsets != oldDelegate.viewInsets ||
         !setEquals(avoidBounds, oldDelegate.avoidBounds);
   }
 }
 
-class _PopupMenuRoute<T> extends PopupRoute<T> {
-  _PopupMenuRoute({
+class PopupMenuRoute<T> extends PopupRoute<T> {
+  PopupMenuRoute({
     this.position,
     this.positionBuilder,
-    required this.items,
+    List<PopupMenuEntry<T>> items = const [],
     required this.itemKeys,
     this.initialValue,
     this.elevation,
@@ -949,11 +978,17 @@ class _PopupMenuRoute<T> extends PopupRoute<T> {
     super.settings,
     super.requestFocus,
     this.popUpAnimationStyle,
+    this.customEntry,
   }) : assert(
          (position != null) != (positionBuilder != null),
          'Either position or positionBuilder must be provided.',
        ),
-       itemSizes = List<Size?>.filled(items.length, null),
+       assert(
+         items.isNotEmpty != (customEntry != null),
+         'Either items or customEntry must be provided.',
+       ),
+       items = customEntry != null ? [customEntry] : items,
+       itemSizes = List<Size?>.filled(customEntry != null ? 1 : items.length, null),
        // Menus always cycle focus through their items irrespective of the
        // focus traversal edge behavior set in the Navigator.
        super(traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop);
@@ -975,6 +1010,7 @@ class _PopupMenuRoute<T> extends PopupRoute<T> {
   final BoxConstraints? constraints;
   final Clip clipBehavior;
   final AnimationStyle? popUpAnimationStyle;
+  final PopupMenuEntry<T>? customEntry;
 
   CurvedAnimation? _animation;
 
@@ -1052,6 +1088,7 @@ class _PopupMenuRoute<T> extends PopupRoute<T> {
               selectedItemIndex,
               Directionality.of(context),
               mediaQuery.padding,
+              mediaQuery.viewInsets,
               _avoidBounds(mediaQuery),
             ),
             child: capturedThemes.wrap(menu),
@@ -1166,7 +1203,7 @@ Future<T?> showMenu<T>({
   required BuildContext context,
   RelativeRect? position,
   PopupMenuPositionBuilder? positionBuilder,
-  required List<PopupMenuEntry<T>> items,
+  List<PopupMenuEntry<T>> items = const [],
   T? initialValue,
   double? elevation,
   Color? shadowColor,
@@ -1181,8 +1218,9 @@ Future<T?> showMenu<T>({
   RouteSettings? routeSettings,
   AnimationStyle? popUpAnimationStyle,
   bool? requestFocus,
+  PopupMenuEntry<T>? customEntry,
 }) {
-  assert(items.isNotEmpty);
+  assert(items.isNotEmpty != (customEntry != null));
   assert(debugCheckHasMaterialLocalizations(context));
   assert(
     (position != null) != (positionBuilder != null),
@@ -1200,10 +1238,13 @@ Future<T?> showMenu<T>({
       semanticLabel ??= MaterialLocalizations.of(context).popupMenuLabel;
   }
 
-  final menuItemKeys = List<GlobalKey>.generate(items.length, (int index) => GlobalKey());
+  final menuItemKeys = List<GlobalKey>.generate(
+    customEntry != null ? 1 : items.length,
+    (int index) => GlobalKey(),
+  );
   final NavigatorState navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   return navigator.push(
-    _PopupMenuRoute<T>(
+    PopupMenuRoute<T>(
       position: position,
       positionBuilder: positionBuilder,
       items: items,
@@ -1223,6 +1264,7 @@ Future<T?> showMenu<T>({
       settings: routeSettings,
       popUpAnimationStyle: popUpAnimationStyle,
       requestFocus: requestFocus,
+      customEntry: customEntry,
     ),
   );
 }

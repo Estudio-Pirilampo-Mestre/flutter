@@ -1200,6 +1200,9 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
         );
       }
 
+      // The snackbar max width is set to 600.
+      final bool hasSpaceForSnackbar = size.width >= 600 + floatingActionButtonRect.width + 16;
+
       final double snackBarYOffsetBase;
       final bool showAboveFab = switch (currentFloatingActionButtonLocation) {
         FloatingActionButtonLocation.startTop ||
@@ -1220,14 +1223,20 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
         FloatingActionButtonLocation.miniCenterDocked ||
         FloatingActionButtonLocation.miniCenterFloat ||
         FloatingActionButtonLocation.miniEndDocked ||
-        FloatingActionButtonLocation.miniEndFloat => true,
+        FloatingActionButtonLocation.miniEndFloat => !hasSpaceForSnackbar,
         FloatingActionButtonLocation() => true,
       };
       if (floatingActionButtonRect.size != Size.zero && isSnackBarFloating && showAboveFab) {
+        final bool isHomePageFabLocation =
+            currentFloatingActionButtonLocation.runtimeType.toString() == '_HomePageFabLocation';
+        final double fabYOffset = isHomePageFabLocation && hasSpaceForSnackbar
+            ? floatingActionButtonRect.bottom
+            : floatingActionButtonRect.top;
+
         if (bottomNavigationBarTop != null) {
-          snackBarYOffsetBase = math.min(bottomNavigationBarTop, floatingActionButtonRect.top);
+          snackBarYOffsetBase = math.min(bottomNavigationBarTop, fabYOffset);
         } else {
-          snackBarYOffsetBase = floatingActionButtonRect.top;
+          snackBarYOffsetBase = fabYOffset;
         }
       } else {
         // SnackBarBehavior.fixed applies a SafeArea automatically.

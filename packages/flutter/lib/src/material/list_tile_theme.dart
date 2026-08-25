@@ -622,25 +622,8 @@ class ListTileTheme extends InheritedTheme {
 
   @override
   Widget wrap(BuildContext context, Widget child) {
-    return ListTileTheme(
-      data: ListTileThemeData(
-        dense: dense,
-        shape: shape,
-        style: style,
-        selectedColor: selectedColor,
-        iconColor: iconColor,
-        textColor: textColor,
-        contentPadding: contentPadding,
-        tileColor: tileColor,
-        selectedTileColor: selectedTileColor,
-        enableFeedback: enableFeedback,
-        horizontalTitleGap: horizontalTitleGap,
-        minVerticalPadding: minVerticalPadding,
-        minLeadingWidth: minLeadingWidth,
-        isThreeLine: _data?.isThreeLine,
-      ),
-      child: child,
-    );
+    // Fixes ListTile not receiving theme's text styles in some situtations.
+    return ListTileTheme(data: data, child: child);
   }
 
   @override

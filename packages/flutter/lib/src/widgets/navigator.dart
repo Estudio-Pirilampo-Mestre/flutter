@@ -5686,6 +5686,39 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin, Res
     }
   }
 
+  /// Pops all routes matching the given [predicate] with animation.
+  ///
+  /// Unlike [removeRoute], which removes routes immediately without animation,
+  /// this method allows matching routes to animate out. Unlike [popUntil],
+  /// which stops popping when the predicate returns true, this method pops
+  /// every route for which the predicate returns true.
+  void popWhere(RoutePredicate predicate, [Object? result]) {
+    assert(!_debugLocked);
+    assert(() {
+      _debugLocked = true;
+      return true;
+    }());
+    final hadCurrent =
+        _lastRouteEntryWhereOrNull(
+          (_RouteEntry e) => _RouteEntry.isPresentPredicate(e) && predicate(e.route),
+        ) !=
+        null;
+    for (final _RouteEntry entry
+        in _history
+            .where((_RouteEntry e) => _RouteEntry.isPresentPredicate(e) && predicate(e.route))
+            .toList()) {
+      entry.pop(result, imperativeRemoval: true);
+    }
+    _flushHistoryUpdates(rearrangeOverlay: false);
+    assert(() {
+      _debugLocked = false;
+      return true;
+    }());
+    if (hadCurrent) {
+      _afterNavigation(_lastRouteEntryWhereOrNull(_RouteEntry.isPresentPredicate)?.route);
+    }
+  }
+
   /// Immediately remove `route` from the navigator, and [Route.dispose] it.
   ///
   /// {@macro flutter.widgets.navigator.removeRoute}

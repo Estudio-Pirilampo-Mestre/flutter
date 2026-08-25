@@ -388,14 +388,19 @@ class _HelperErrorState extends State<_HelperError> with SingleTickerProviderSta
 
   Widget _buildHelper() {
     assert(widget.helper != null || widget.helperText != null);
+    final String? helperText = widget.helperText;
+    Widget? helper = widget.helper;
+    if (helper != null && widget.helperStyle != null) {
+      helper = DefaultTextStyle(style: widget.helperStyle!, child: helper);
+    }
     return Semantics(
       container: true,
       child: FadeTransition(
         opacity: Tween<double>(begin: 1.0, end: 0.0).animate(_controller),
         child:
-            widget.helper ??
+            helper ??
             Text(
-              widget.helperText!,
+              helperText!,
               style: widget.helperStyle,
               textAlign: widget.textAlign,
               overflow: TextOverflow.ellipsis,
@@ -2552,19 +2557,21 @@ class _InputDecoratorState extends State<InputDecorator> with TickerProviderStat
       errorMaxLines: decoration.errorMaxLines,
     );
 
+    final TextStyle helperStyle = _getHelperStyle(
+      themeData,
+      defaults,
+    ).merge(WidgetStateProperty.resolveAs(decoration.counterStyle, widgetState));
+
     Widget? counter;
     if (decoration.counter != null) {
-      counter = decoration.counter;
+      counter = DefaultTextStyle(style: helperStyle, child: decoration.counter!);
     } else if (decoration.counterText != null && decoration.counterText != '') {
       counter = Semantics(
         container: true,
         liveRegion: isFocused,
         child: Text(
           decoration.counterText!,
-          style: _getHelperStyle(
-            themeData,
-            defaults,
-          ).merge(WidgetStateProperty.resolveAs(decoration.counterStyle, widgetState)),
+          style: helperStyle,
           overflow: TextOverflow.ellipsis,
           semanticsLabel: decoration.semanticCounterText,
         ),

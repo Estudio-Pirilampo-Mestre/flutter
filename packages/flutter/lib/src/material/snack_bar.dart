@@ -820,7 +820,11 @@ class _SnackBarState extends State<SnackBar> {
           child: SizedBox(width: width, child: snackBar),
         );
       } else {
-        snackBar = Padding(padding: margin, child: snackBar);
+        snackBar = Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          padding: margin,
+          child: snackBar,
+        );
       }
       snackBar = SafeArea(top: false, bottom: false, child: snackBar);
     }
