@@ -1908,6 +1908,11 @@ abstract class ModalRoute<T> extends TransitionRoute<T> with LocalHistoryRoute<T
   /// This should only be used between frames, not during build.
   @override
   bool get popGestureEnabled {
+    // There's a bug on Android that prevents any gesture when a back swipe is
+    // started (even if it doesn't work on Android anyway).
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return false;
+    }
     // If there's nothing to go back to, then obviously we don't support
     // the back gesture.
     if (isFirst) {
